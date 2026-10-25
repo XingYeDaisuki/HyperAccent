@@ -15,8 +15,8 @@ android {
         applicationId = "com.hyperaccent.miuix"
         minSdk = 31
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.5.2"
+        versionCode = 9
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

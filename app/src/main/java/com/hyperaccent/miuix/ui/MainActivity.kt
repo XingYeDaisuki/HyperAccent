@@ -158,8 +158,8 @@ private fun SettingsScreen() {
     var contrastText by rememberSaveable {
         mutableStateOf(prefs.getBoolean(ConfigStore.KEY_CONTRAST, true))
     }
-    var nativeColors by rememberSaveable {
-        mutableStateOf(prefs.getBoolean(ConfigStore.KEY_NATIVE, true))
+    var monetColors by rememberSaveable {
+        mutableStateOf(prefs.getBoolean(ConfigStore.KEY_MONET, true))
     }
     var accent by remember {
         mutableStateOf(Color(ConfigStore.readAccent(context)))
@@ -183,14 +183,16 @@ private fun SettingsScreen() {
         newEnabled: Boolean = enabled,
         newAccent: Color = accent,
         newContrast: Boolean = contrastText,
-        newNative: Boolean = nativeColors,
+        newMonet: Boolean = monetColors,
         newPackages: Set<String> = enabledPackages,
     ) {
         ConfigStore.prefs(context).edit()
             .putBoolean(ConfigStore.KEY_ENABLED, newEnabled)
             .putInt(ConfigStore.KEY_ACCENT, newAccent.toArgb() or 0xFF000000.toInt())
             .putBoolean(ConfigStore.KEY_CONTRAST, newContrast)
-            .putBoolean(ConfigStore.KEY_NATIVE, newNative)
+            // Native accents are always on now; keep the legacy key explicitly true.
+            .putBoolean(ConfigStore.KEY_NATIVE, true)
+            .putBoolean(ConfigStore.KEY_MONET, newMonet)
             .putString(ConfigStore.KEY_PACKAGES, ConfigStore.encodePackages(newPackages))
             .apply()
         val published = ConfigStore.publishToSystem(
@@ -198,7 +200,7 @@ private fun SettingsScreen() {
             newEnabled,
             newAccent.toArgb() or 0xFF000000.toInt(),
             newContrast,
-            newNative,
+            newMonet,
             newPackages,
         )
         if (!published) {
@@ -223,13 +225,13 @@ private fun SettingsScreen() {
         val currentPackages = enabledPackages
         val currentEnabled = enabled
         val currentContrast = contrastText
-        val currentNative = nativeColors
+        val currentMonet = monetColors
         scope.launch {
             val synced = withContext(Dispatchers.IO) {
                 ConfigStore.publishToSystem(
-                    context, currentEnabled, currentAccent, currentContrast, currentNative, currentPackages
+                    context, currentEnabled, currentAccent, currentContrast, currentMonet, currentPackages
                 ) || ConfigStore.publishToSystemViaRoot(
-                    currentEnabled, currentAccent, currentContrast, currentNative, currentPackages
+                    currentEnabled, currentAccent, currentContrast, currentMonet, currentPackages
                 )
             }
             status = if (synced) {
@@ -295,7 +297,7 @@ private fun SettingsScreen() {
             Card(modifier = Modifier.fillMaxWidth(), insideMargin = PaddingValues(16.dp)) {
                 SwitchRow(
                     title = "启用强调色替换",
-                    summary = "仅改写 HyperOS 强调色资源",
+                    summary = "同时接管 HyperOS 与系统原生强调色",
                     checked = enabled,
                     accent = accent,
                     onCheckedChange = {
@@ -305,13 +307,13 @@ private fun SettingsScreen() {
                 )
                 Spacer(Modifier.height(12.dp))
                 SwitchRow(
-                    title = "同时修改原生取色",
-                    summary = "WiFi/蓝牙列表、相册、电话、天气等大量界面需要开启",
-                    checked = nativeColors,
+                    title = "同时修改 Monet / Material You 取色",
+                    summary = "关闭后保留系统动态取色，只改 HyperOS 界面强调色",
+                    checked = monetColors,
                     accent = accent,
                     onCheckedChange = {
-                        nativeColors = it
-                        persist(newNative = it)
+                        monetColors = it
+                        persist(newMonet = it)
                     },
                 )
                 Spacer(Modifier.height(12.dp))
@@ -436,7 +438,7 @@ private fun SettingsScreen() {
             SmallTitle(text = "应用与重启")
             Card(modifier = Modifier.fillMaxWidth(), insideMargin = PaddingValues(16.dp)) {
                 Text(
-                    text = "资源颜色会被系统缓存。修改颜色、原生取色开关或应用列表后，需要重启对应进程。",
+                    text = "资源颜色会被系统缓存。修改颜色、Monet / Material You 开关或应用列表后，需要重启对应进程。",
                     style = MiuixTheme.textStyles.body2,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                 )
@@ -530,15 +532,15 @@ private fun SettingsScreen() {
                     val currentPackages = enabledPackages
                     val currentEnabled = enabled
                     val currentContrast = contrastText
-                    val currentNative = nativeColors
+                    val currentMonet = monetColors
                     scope.launch {
                         val result = withContext(Dispatchers.IO) {
                             val synced = ConfigStore.publishToSystem(
                                 context, currentEnabled, currentAccent, currentContrast,
-                                currentNative, currentPackages
+                                currentMonet, currentPackages
                             ) || ConfigStore.publishToSystemViaRoot(
                                 currentEnabled, currentAccent, currentContrast,
-                                currentNative, currentPackages
+                                currentMonet, currentPackages
                             )
                             val restartResult = targets.joinToString("\n") { target ->
                                 "${target.label}：${restartProcess(target.packageName)}"

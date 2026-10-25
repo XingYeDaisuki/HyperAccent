@@ -12,27 +12,31 @@ public final class AccentConfig {
      * unexpectedly.
      */
     public static final AccentConfig DEFAULT = new AccentConfig(
-            false, DEFAULT_ACCENT, true, false, Collections.<String>emptySet());
+            false, DEFAULT_ACCENT, true, true, Collections.<String>emptySet());
 
     public final boolean enabled;
     public final int accent;
     public final boolean contrastText;
-    public final boolean nativeColors;
+    /**
+     * Whether Monet / Material You dynamic colors follow the custom accent. Native
+     * SettingsLib and HyperOS accent roles are always enabled with the master switch.
+     */
+    public final boolean monetColors;
     private final Set<String> enabledPackages;
 
     public AccentConfig(boolean enabled, int accent, boolean contrastText) {
-        this(enabled, accent, contrastText, false, ScopePackages.defaultEnabled());
+        this(enabled, accent, contrastText, true, ScopePackages.defaultEnabled());
     }
 
     public AccentConfig(boolean enabled, int accent, boolean contrastText, Set<String> packages) {
-        this(enabled, accent, contrastText, false, packages);
+        this(enabled, accent, contrastText, true, packages);
     }
 
     public AccentConfig(
             boolean enabled,
             int accent,
             boolean contrastText,
-            boolean nativeColors,
+            boolean monetColors,
             Set<String> packages
     ) {
         this.enabled = enabled;
@@ -40,7 +44,7 @@ public final class AccentConfig {
         // resources and that alpha is preserved by resolve().
         this.accent = AccentColorMath.opaque(accent);
         this.contrastText = contrastText;
-        this.nativeColors = nativeColors;
+        this.monetColors = monetColors;
         this.enabledPackages = packages == null
                 ? Collections.<String>emptySet()
                 : Collections.unmodifiableSet(new LinkedHashSet<>(packages));
@@ -73,9 +77,12 @@ public final class AccentConfig {
             return null;
         }
 
-        boolean nativeAccent = nativeColors && AccentNameMatcher.isNativeAccent(resourceName);
-        boolean nativeOnAccent = nativeColors && AccentNameMatcher.isNativeOnAccent(resourceName);
-        boolean nativeContainer = nativeColors && AccentNameMatcher.isNativeContainer(resourceName);
+        boolean monetAccent = AccentNameMatcher.isMonetAccent(resourceName);
+        boolean nativeAccent = AccentNameMatcher.isNativeAccent(resourceName)
+                && (!monetAccent || monetColors);
+        boolean nativeOnAccent = AccentNameMatcher.isNativeOnAccent(resourceName)
+                && (!AccentNameMatcher.isMonetOnAccent(resourceName) || monetColors);
+        boolean nativeContainer = monetColors && AccentNameMatcher.isNativeContainer(resourceName);
         if (!nativeAccent && !nativeOnAccent && !nativeContainer
                 && AccentNameMatcher.isExcluded(resourceName)) {
             return null;

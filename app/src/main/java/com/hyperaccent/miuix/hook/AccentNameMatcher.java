@@ -154,14 +154,15 @@ public final class AccentNameMatcher {
     }
 
     /**
-     * Optional native-theme accent roles. These are only used when the user enables
-     * "also modify native colors"; by default they stay untouched.
+     * Monet / Material You dynamic-color roles. The module always takes over the
+     * HyperOS native accent roles; this smaller subset is optional so users can keep
+     * the system's wallpaper-derived palette while still recoloring HyperOS UI.
      *
      * <p>Only primary accent tones are included. Container/background tones such as
-     * system_accent1_50/100 are deliberately left alone to avoid flattening Monets
-     * tonal surfaces into one solid color.
+     * system_accent1_50/100 are handled separately to avoid flattening tonal
+     * surfaces into one solid color.
      */
-    public static boolean isNativeAccent(String name) {
+    public static boolean isMonetAccent(String name) {
         if (name == null || name.isEmpty()) {
             return false;
         }
@@ -181,16 +182,36 @@ public final class AccentNameMatcher {
         if (n.startsWith("material_dynamic_primary")) {
             return true;
         }
-        if (n.equals("materialcolorprimary")
+        return n.equals("materialcolorprimary")
                 || n.equals("materialcolorsecondary")
                 || n.equals("materialcolortertiary")
-                || n.equals("materialcolorcontrolactivated")
-                || n.equals("settingslib_dialog_accent")) {
+                || n.equals("materialcolorcontrolactivated");
+    }
+
+    /**
+     * All native accent roles. SettingsLib/Settings colors are always part of the
+     * master switch; Monet/Material You roles are gated by {@link #isMonetAccent}.
+     */
+    public static boolean isNativeAccent(String name) {
+        if (name == null || name.isEmpty()) {
+            return false;
+        }
+        String n = name.toLowerCase(Locale.ROOT);
+        if (isMonetAccent(n)) {
             return true;
         }
-        return n.startsWith("settingslib_accent")
+        return n.equals("settingslib_dialog_accent")
+                || n.startsWith("settingslib_accent")
                 || n.equals("settingslib_coloraccentprimary")
                 || n.equals("settingslib_coloraccentsecondary");
+    }
+
+    public static boolean isMonetOnAccent(String name) {
+        if (name == null || name.isEmpty()) {
+            return false;
+        }
+        String n = name.toLowerCase(Locale.ROOT);
+        return n.equals("materialcoloronprimary") || n.startsWith("system_on_primary");
     }
 
     public static boolean isNativeOnAccent(String name) {
@@ -198,9 +219,8 @@ public final class AccentNameMatcher {
             return false;
         }
         String n = name.toLowerCase(Locale.ROOT);
-        return n.equals("materialcoloronprimary")
-                || n.equals("settingslib_text_color_on_accent_device_default")
-                || n.startsWith("system_on_primary");
+        return isMonetOnAccent(n)
+                || n.equals("settingslib_text_color_on_accent_device_default");
     }
 
     /**

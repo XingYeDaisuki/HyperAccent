@@ -93,7 +93,7 @@ public final class RuntimeConfig {
                 + ": enabled=" + loaded.enabled
                 + " accent=#" + String.format("%08X", loaded.accent)
                 + " contrast=" + loaded.contrastText
-                + " native=" + loaded.nativeColors
+                + " monet=" + loaded.monetColors
                 + " packages=" + loaded.enabledPackageCount());
     }
 
@@ -112,13 +112,16 @@ public final class RuntimeConfig {
                 return null;
             }
             String[] parts = raw.split("\\|", 6);
-            if (parts.length != 6 || !"v1".equals(parts[0])) {
+            if (parts.length != 6
+                    || (!"v1".equals(parts[0]) && !"v2".equals(parts[0]))) {
                 return null;
             }
             boolean enabled = "1".equals(parts[1]);
             int accent = Integer.parseInt(parts[2]);
             boolean contrast = "1".equals(parts[3]);
-            boolean nativeColors = "1".equals(parts[4]);
+            // v1 stored the old native switch in this slot. Native colors are always
+            // on now, so the same value is the closest migration for the Monet switch.
+            boolean monetColors = "1".equals(parts[4]);
             Set<String> packages = new java.util.LinkedHashSet<>();
             if (!parts[5].isEmpty()) {
                 for (String pkg : parts[5].split(",")) {
@@ -127,7 +130,7 @@ public final class RuntimeConfig {
                     }
                 }
             }
-            return new AccentConfig(enabled, accent, contrast, nativeColors, packages);
+            return new AccentConfig(enabled, accent, contrast, monetColors, packages);
         } catch (Throwable t) {
             return null;
         }
@@ -157,20 +160,26 @@ public final class RuntimeConfig {
                     ConfigStore.KEY_ACCENT,
                     ConfigStore.KEY_CONTRAST,
                     ConfigStore.KEY_NATIVE,
+                    ConfigStore.KEY_MONET,
                     ConfigStore.KEY_PACKAGES
             }, null, null, null);
             if (cursor == null || !cursor.moveToFirst()) {
                 return null;
             }
-            boolean enabled = cursor.getInt(0) != 0;
-            int accent = cursor.getInt(1);
-            boolean contrast = cursor.getInt(2) != 0;
-            boolean nativeColors = cursor.getInt(3) != 0;
-            String rawPackages = cursor.getString(4);
+            boolean enabled = cursor.getInt(cursor.getColumnIndexOrThrow(ConfigStore.KEY_ENABLED)) != 0;
+            int accent = cursor.getInt(cursor.getColumnIndexOrThrow(ConfigStore.KEY_ACCENT));
+            boolean contrast = cursor.getInt(cursor.getColumnIndexOrThrow(ConfigStore.KEY_CONTRAST)) != 0;
+            int nativeIndex = cursor.getColumnIndex(ConfigStore.KEY_NATIVE);
+            int monetIndex = cursor.getColumnIndex(ConfigStore.KEY_MONET);
+            boolean monetColors = monetIndex >= 0
+                    ? cursor.getInt(monetIndex) != 0
+                    : (nativeIndex < 0 || cursor.getInt(nativeIndex) != 0);
+            String rawPackages = cursor.getString(
+                    cursor.getColumnIndexOrThrow(ConfigStore.KEY_PACKAGES));
             Set<String> packages = rawPackages == null
                     ? ScopePackages.defaultEnabled()
                     : ConfigStore.decodePackages(rawPackages);
-            return new AccentConfig(enabled, accent, contrast, nativeColors, packages);
+            return new AccentConfig(enabled, accent, contrast, monetColors, packages);
         } catch (Throwable t) {
             module.log(Log.WARN, TAG, "provider config read failed for " + packageName
                     + " (context=" + context.getPackageName() + "): " + t);
@@ -194,12 +203,15 @@ public final class RuntimeConfig {
             boolean enabled = prefs.getBoolean(ConfigStore.KEY_ENABLED, true);
             int accent = prefs.getInt(ConfigStore.KEY_ACCENT, ConfigStore.DEFAULT_ACCENT);
             boolean contrast = prefs.getBoolean(ConfigStore.KEY_CONTRAST, true);
-            boolean nativeColors = prefs.getBoolean(ConfigStore.KEY_NATIVE, true);
+            boolean monetColors = prefs.getBoolean(
+                    ConfigStore.KEY_MONET,
+                    prefs.getBoolean(ConfigStore.KEY_NATIVE, true)
+            );
             String rawPackages = prefs.getString(ConfigStore.KEY_PACKAGES, null);
             Set<String> packages = rawPackages == null
                     ? ScopePackages.defaultEnabled()
                     : ConfigStore.decodePackages(rawPackages);
-            return new AccentConfig(enabled, accent, contrast, nativeColors, packages);
+            return new AccentConfig(enabled, accent, contrast, monetColors, packages);
         } catch (Throwable t) {
             return null;
         }

@@ -67,9 +67,22 @@ public class AccentNameMatcherTest {
         assertTrue(AccentNameMatcher.isNativeAccent("system_accent1_500"));
         assertTrue(AccentNameMatcher.isNativeAccent("system_accent3_200"));
         assertTrue(AccentNameMatcher.isNativeAccent("materialColorPrimary"));
+        assertTrue(AccentNameMatcher.isNativeAccent("settingslib_accent_primary_device_default"));
         assertFalse(AccentNameMatcher.isNativeAccent("system_accent1_100"));
         assertFalse(AccentNameMatcher.isNativeAccent("materialColorSurface"));
         assertTrue(AccentNameMatcher.isNativeOnAccent("materialColorOnPrimary"));
+    }
+
+    @Test
+    public void monetRolesAreSeparateFromSettingsLib() {
+        assertTrue(AccentNameMatcher.isMonetAccent("system_accent1_500"));
+        assertTrue(AccentNameMatcher.isMonetAccent("material_dynamic_primary40"));
+        assertTrue(AccentNameMatcher.isMonetAccent("materialColorPrimary"));
+        assertTrue(AccentNameMatcher.isMonetOnAccent("materialColorOnPrimary"));
+        assertTrue(AccentNameMatcher.isMonetOnAccent("system_on_primary_light"));
+        assertFalse(AccentNameMatcher.isMonetAccent("settingslib_accent_primary_device_default"));
+        assertFalse(AccentNameMatcher.isMonetOnAccent(
+                "settingslib_text_color_on_accent_device_default"));
     }
 
     @Test

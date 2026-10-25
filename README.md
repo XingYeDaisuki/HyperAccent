@@ -9,7 +9,8 @@ HyperAccent 是一个面向 **小米澎湃 OS（HyperOS）** 的 LSPosed 模块�
 - **完整取色器**：8 个预设色，也支持任意 HEX 颜色。
 - **保留透明度**：禁用态、浅色叠层、半透明背景会保留原 alpha，不会全部变成实心色。
 - **自动文字对比色**：浅色强调色（黄色、薄荷色等）会自动把强调色上的文字/图标切成黑色。
-- **同时修改原生取色**：可选覆盖 `system_accent*`、`materialColorPrimary`、`settingslib_accent*` 等原生强调角色；默认开启，关闭后只改 Miuix 资源。
+- **原生强调色默认接管**：总开关默认同时覆盖 Miuix、SettingsLib 和 HyperOS 原生强调角色，不再需要单独的“原生取色”开关。
+- **Monet / Material You 可选**：第二个开关只控制 `system_accent*`、`material_dynamic_*`、`materialColor*` 等动态取色角色；关闭后保留系统壁纸取色，只改 HyperOS / SettingsLib 强调色。
 - **应用级开关**：二级页面从系统读取图标，可逐个勾选生效应用，支持全选/全不选。
 - **重启作用域**：像 HyperCeiler 一样用对话框选择要重启的进程，改色后不用手动找应用。
 - **配置同步**：支持 `Settings.System` 和只读 ContentProvider 两条通道，避免目标进程读不到模块设置。
@@ -29,12 +30,13 @@ LSPosed 2.1.0+ 通常会自动应用 `scope.list`；如果你的 LSPosed 分支�
 
 ## 安装与使用
 
-1. 从 [GitHub Releases](https://github.com/XingYeDaisuki/HyperAccent/releases) 下载并安装 `HyperAccent-1.5.2.apk`。
+1. 从 [GitHub Releases](https://github.com/XingYeDaisuki/HyperAccent/releases) 下载并安装 `HyperAccent-1.6.0.apk`。
 2. 在 LSPosed 中启用模块，确认作用域包含“系统界面”“系统桌面”“设置”等应用。
 3. **重启手机**。首次启用必须重启，之后改色也需要重启对应进程。
 4. 打开 HyperAccent：
    - 选择颜色，或输入 HEX；
    - 在“生效应用”里确认要改色的应用；
+   - “同时修改 Monet / Material You 取色”默认开启；关闭后保留系统壁纸动态取色，只改 HyperOS / SettingsLib 强调色；
    - 点“应用当前颜色”。
 5. 如果不想逐个重启，点“重启生效作用域”，勾选目标后一键重启。
 
@@ -72,27 +74,33 @@ colorAccent / textColorAccent / colorControlActivated
 theme_color / miui_theme_color
 ```
 
-开启“同时修改原生取色”后，还会覆盖：
+总开关开启后，还会覆盖以下原生强调色：
+
+```
+settingslib_accent_primary_device_default
+settingslib_colorAccentPrimary
+settingslib_colorAccentSecondary
+settingslib_dialog_accent
+```
+
+其中 Monet / Material You 角色由第二个开关单独控制，默认开启：
 
 ```
 system_accent1/2/3_{200,300,500,600,700}
 material_dynamic_primary*
-materialColorPrimary / Secondary / Tertiary
-settingslib_accent_primary_device_default
-settingslib_colorAccentPrimary
-settingslib_dialog_accent
+materialColorPrimary / Secondary / Tertiary / ControlActivated
 ```
 
-以及对应的 on-accent 文字色，例如 `materialColorOnPrimary`、`system_on_primary*`、`settingslib_text_color_on_accent_device_default`。
+以及对应的 on-accent 文字色，例如 `materialColorOnPrimary`、`system_on_primary*`、`settingslib_text_color_on_accent_device_default`。关闭第二个开关后，`system_accent*`、`material_dynamic_*`、`materialColor*` 会保留系统动态取色；SettingsLib 和 HyperOS 强调色仍跟随模块。
 
 模块不写死资源 ID，而是按**资源 entry name** 匹配，再在资源解析层返回替换色；同时会把解析后的颜色与 Miuix 默认蓝色核心色板比对，覆盖“引用了派生资源、名字看不出来”的情况。
 
 ### 不会修改
 
 ```
-system_accent*              # Android Monet（未开启原生开关时）
-material*                   # Material / Material You（未开启原生开关时）
-settingslib_*               # SettingsLib 原生强调色（未开启原生开关时）
+system_accent*              # 第二个开关关闭时的 Monet
+material_dynamic_*          # 第二个开关关闭时的 Material You
+materialColor*              # 第二个开关关闭时的 Material 角色
 sud_* / suw_*               # 设置向导
 status_bar_battery_*        # 电池语义色
 battery_indicator_*         # 电池语义色
@@ -107,7 +115,7 @@ ringtone_auth_accent
 - **只覆盖资源型颜色。** Compose 里直接写死的 `Color(0xFF...)`、Java 里 `Color.parseColor()` 常量、图片里的像素都不会被重绘。
 - **Flutter 页面不支持。** 例如相册的设置页：相册 APK 是 `android:hasCode="false"`，界面由 `libapp.so` + `flutter_assets` 渲染，不经过 `Resources.getColor` / `TypedArray`，LSPosed 没有 Java 入口可 Hook。这页的开关和图标会保持原色，不是作用域没勾选。
 - **电话页的自绘图标不处理。** `com.android.phone` 的移动数据开关、余额等资源色会跟随模块；SIM 卡自绘芯片属于图标/绘制层，保持原样。
-- **“原生取色”不是完整 Material 调色板。** 只处理系统原生强调主色阶，深色/浅色容器仍是系统原来的色调。
+- **Monet / Material You 不是完整调色板。** 只处理系统强调主色阶和少量容器叠层，不会重建整套 Material 色板；关闭第二个开关即可保留系统动态取色。
 - **作用域是静态的。** 列表外的第三方应用需要修改 `ScopePackages` 和 `scope.list` 后重新构建。
 - **持久化进程需要重启手机。** `com.android.phone` 等 persistent 进程不能被普通 `force-stop` 杀掉。
 
@@ -181,8 +189,8 @@ Resources.Theme.resolveAttribute(int, TypedValue, boolean)
 
 Hook 进程通过两个通道读取模块设置：
 
-- **Settings.System**：`hyperaccent_config_v1`，主通道；
-- **只读 Provider**：`content://com.hyperaccent.miuix.prefs/config`，只暴露 `enabled / accent_color / contrast_text / native_colors / enabled_packages`，不提供写入。
+- **Settings.System**：`hyperaccent_config_v1`，主通道；当前格式为 `v2|enabled|accent|contrast|monet|packages`，旧 `v1` 值仍可读取；
+- **只读 Provider**：`content://com.hyperaccent.miuix.prefs/config`，只暴露 `enabled / accent_color / contrast_text / native_colors / monet_colors / enabled_packages`，不提供写入。
 
 模块内部通过 `Application.attach/onCreate`、`Activity.onCreate` 等时机懒加载配置，并在首次取色失败时重试。
 
@@ -204,7 +212,7 @@ LSPosed → 日志，过滤 `HyperAccent`。Debug 版会输出：
 
 ```
 [HyperAccent] module loaded in com.miui.home (api=102)
-[HyperAccent] config loaded from settings: enabled=true accent=#FFFF7496 contrast=true native=true packages=51
+[HyperAccent] config loaded from settings: enabled=true accent=#FFFF7496 contrast=true monet=true packages=51
 [HyperAccent] [com.miui.home] installed resource hook(s) for com.miui.home
 [HyperAccent] [com.miui.home] accent miuix_default_color_primary_light -> #FFFF7496
 ```
@@ -223,7 +231,7 @@ LSPosed → 日志，过滤 `HyperAccent`。Debug 版会输出：
 
 ### 原生 Material You 没变
 
-如果“同时修改原生取色”已关闭，原生资源会被刻意跳过；打开开关并重启对应进程后再试。模块不会重建完整 Material 调色板。
+第一个总开关默认会接管 HyperOS / SettingsLib 原生强调色；如果只有 `system_accent*`、`material_dynamic_*`、`materialColor*` 没变，检查第二个“同时修改 Monet / Material You 取色”是否关闭，打开并重启对应进程后再试。模块不会重建完整 Material 调色板。
 
 ## 代码结构
 

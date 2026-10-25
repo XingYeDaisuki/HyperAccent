@@ -25,10 +25,10 @@ public class AccentConfigTest {
     }
 
     @Test
-    public void unrelatedAndDisabledResourcesReturnNull() {
+    public void unrelatedResourcesReturnNull() {
         AccentConfig config = new AccentConfig(true, 0xFF36D167, true);
         assertNull(config.resolve("miuix_appcompat_dialog_default_button_text_color_light", 0xFFFFFFFF, true));
-        assertNull(config.resolve("system_accent1_500", 0xFF3482FF, true));
+        assertEquals(0xFF36D167, (int) config.resolve("system_accent1_500", 0xFF3482FF, true));
         assertNull(config.resolve("notification_primary_text_color_light", 0xFFFFFFFF, true));
         assertNull(config.resolve("materialColorOnPrimaryContainer", 0xFFFFFFFF, true));
         assertNull(config.resolve("status_bar_battery_performance", 0xFF3482FF, true));
@@ -64,9 +64,12 @@ public class AccentConfigTest {
     }
 
     @Test
-    public void nativeColorsAreOptIn() {
+    public void monetColorsCanBeDisabledButSettingsLibStaysNative() {
         AccentConfig off = new AccentConfig(true, 0xFF36D167, true, false, ScopePackages.defaultEnabled());
         assertNull(off.resolve("system_accent1_500", 0xFF3482FF, true));
+        assertNull(off.resolve("materialColorPrimary", 0xFF3482FF, true));
+        assertEquals(0xFF36D167, (int) off.resolve(
+                "settingslib_accent_primary_device_default", 0xFF3482FF, true));
 
         AccentConfig on = new AccentConfig(true, 0xFF36D167, true, true, ScopePackages.defaultEnabled());
         assertEquals(0xFF36D167, (int) on.resolve("system_accent1_500", 0xFF3482FF, true));

@@ -16,7 +16,10 @@ public final class ConfigStore {
     public static final String KEY_ENABLED = "enabled";
     public static final String KEY_ACCENT = "accent_color";
     public static final String KEY_CONTRAST = "contrast_text";
+    /** Legacy native toggle; native accents are now always included in the master switch. */
     public static final String KEY_NATIVE = "native_colors";
+    /** Optional Monet / Material You dynamic colors. */
+    public static final String KEY_MONET = "monet_colors";
     public static final String KEY_NATIVE_MIGRATED = "native_colors_default_v2";
     public static final String KEY_PACKAGES = "enabled_packages";
     public static final String KEY_PACKAGES_MIGRATED = "packages_expanded_v15";
@@ -45,14 +48,22 @@ public final class ConfigStore {
                     .putInt(KEY_ACCENT, DEFAULT_ACCENT)
                     .putBoolean(KEY_CONTRAST, true)
                     .putBoolean(KEY_NATIVE, true)
+                    .putBoolean(KEY_MONET, true)
                     .putString(KEY_PACKAGES, ScopePackages.defaultPackageString())
                     .apply();
             return;
         }
-        // v1.3 and earlier defaulted native colors to off. Most of the remaining
-        // system surfaces (WiFi/Bluetooth lists, Gallery, Phone, Weather, ...) use
-        // native accent roles, so enable it once for existing installs. The switch
-        // remains available if the user wants pure-Miuix behavior.
+        // v1.5 and earlier had a separate "native colors" switch. Native roles are
+        // now always on; carry the old value over to the new Monet-only switch so an
+        // existing install keeps the same behavior until the user changes it.
+        if (!preferences.contains(KEY_MONET)) {
+            preferences.edit()
+                    .putBoolean(KEY_MONET, preferences.getBoolean(KEY_NATIVE, true))
+                    .apply();
+        }
+        // v1.3 and earlier defaulted native colors to off. Keep the legacy key true so
+        // older hook builds still recolor native roles after an upgrade; the UI no longer
+        // exposes it, and native colors are always included in the master switch.
         if (!preferences.getBoolean(KEY_NATIVE_MIGRATED, false)) {
             preferences.edit()
                     .putBoolean(KEY_NATIVE, true)
@@ -111,7 +122,7 @@ public final class ConfigStore {
             boolean enabled,
             int accent,
             boolean contrast,
-            boolean nativeColors,
+            boolean monetColors,
             Set<String> packages
     ) {
         if (!Settings.System.canWrite(context)) {
@@ -120,7 +131,7 @@ public final class ConfigStore {
         try {
             return Settings.System.putString(
                     context.getContentResolver(), SYSTEM_CONFIG_KEY,
-                    buildSystemValue(enabled, accent, contrast, nativeColors, packages));
+                    buildSystemValue(enabled, accent, contrast, monetColors, packages));
         } catch (Throwable t) {
             return false;
         }
@@ -134,10 +145,10 @@ public final class ConfigStore {
             boolean enabled,
             int accent,
             boolean contrast,
-            boolean nativeColors,
+            boolean monetColors,
             Set<String> packages
     ) {
-        String value = buildSystemValue(enabled, accent, contrast, nativeColors, packages);
+        String value = buildSystemValue(enabled, accent, contrast, monetColors, packages);
         try {
             Process process = Runtime.getRuntime().exec(new String[]{
                     "su", "-c",
@@ -153,7 +164,7 @@ public final class ConfigStore {
             boolean enabled,
             int accent,
             boolean contrast,
-            boolean nativeColors,
+            boolean monetColors,
             Set<String> packages
     ) {
         StringBuilder packageList = new StringBuilder();
@@ -166,10 +177,10 @@ public final class ConfigStore {
             }
             packageList.append(pkg);
         }
-        return "v1|" + (enabled ? 1 : 0)
+        return "v2|" + (enabled ? 1 : 0)
                 + "|" + (accent | 0xFF000000)
                 + "|" + (contrast ? 1 : 0)
-                + "|" + (nativeColors ? 1 : 0)
+                + "|" + (monetColors ? 1 : 0)
                 + "|" + packageList;
     }
 

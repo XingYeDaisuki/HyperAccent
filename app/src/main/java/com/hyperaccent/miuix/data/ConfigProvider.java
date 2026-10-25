@@ -46,6 +46,7 @@ public final class ConfigProvider extends ContentProvider {
                 ConfigStore.KEY_ACCENT,
                 ConfigStore.KEY_CONTRAST,
                 ConfigStore.KEY_NATIVE,
+                ConfigStore.KEY_MONET,
                 ConfigStore.KEY_PACKAGES
         });
         ConfigStore.ensureDefaults(getContext());
@@ -53,10 +54,14 @@ public final class ConfigProvider extends ContentProvider {
         int enabled = prefs.getBoolean(ConfigStore.KEY_ENABLED, true) ? 1 : 0;
         int accent = ConfigStore.readAccent(getContext());
         int contrast = prefs.getBoolean(ConfigStore.KEY_CONTRAST, true) ? 1 : 0;
-        int nativeColors = prefs.getBoolean(ConfigStore.KEY_NATIVE, true) ? 1 : 0;
+        // Native accents are no longer optional; keep this column for older hooks.
+        int nativeColors = 1;
+        int monetColors = prefs.getBoolean(ConfigStore.KEY_MONET, true) ? 1 : 0;
         String packages = prefs.getString(ConfigStore.KEY_PACKAGES,
                 ScopePackages.defaultPackageString());
-        cursor.addRow(new Object[]{enabled, accent, contrast, nativeColors, packages});
+        cursor.addRow(new Object[]{
+                enabled, accent, contrast, nativeColors, monetColors, packages
+        });
         return cursor;
     }
 
