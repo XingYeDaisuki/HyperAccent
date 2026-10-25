@@ -4,8 +4,6 @@ HyperAccent 是一个面向 **小米澎湃 OS（HyperOS）** 的 LSPosed 模块�
 
 模块只处理**通过 Android 资源表取色**的界面，不会修改壁纸、主题包、图标包、字体，也不会向系统分区推送文件。
 
-![HyperAccent 主界面](docs/screenshot-main.png)
-
 ## 功能
 
 - **完整取色器**：8 个预设色，也支持任意 HEX 颜色。
